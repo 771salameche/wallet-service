@@ -6,7 +6,7 @@ import { useWallet } from "@/hooks/useWallet";
 import LoginButton from "@/components/LoginButton";
 
 export default function LoginPage() {
-  const { connect, loading, isConnected } = useWallet();
+  const { connect, loading, isInitializing, isConnected } = useWallet();
   const router = useRouter();
 
   useEffect(() => {
@@ -15,23 +15,31 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm space-y-8">
+      <div className="animate-fade-in-up w-full max-w-sm space-y-8">
 
         {/* Logo + titre */}
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2 mb-1">
+        <div className="space-y-2 text-center">
+          <div className="mb-1 flex items-center justify-center gap-2">
             <span
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-white text-xl font-bold shadow"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-xl font-bold text-white shadow"
               style={{ backgroundColor: "#2563EB" }}
             >
               W
             </span>
             <h1 className="text-2xl font-bold text-gray-900">Auto Wallet</h1>
           </div>
-          <p className="text-sm text-gray-500 leading-relaxed">
+          <p className="text-sm leading-relaxed text-gray-500">
             Création automatique d&apos;un wallet blockchain lors de
             l&apos;inscription
           </p>
+        </div>
+
+        {/* Compteur social proof */}
+        <div className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-50 px-4 py-2.5">
+          <span className="text-sm font-bold text-blue-700">47</span>
+          <span className="text-sm text-blue-600">
+            utilisateurs ont déjà créé leur wallet
+          </span>
         </div>
 
         {/* Bouton connexion */}
@@ -97,9 +105,9 @@ function Feature({
   label: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 rounded-xl bg-white p-3 shadow-sm border border-gray-100">
+    <div className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
       <span className="text-blue-600">{icon}</span>
-      <span className="text-xs font-medium text-gray-600 leading-tight">{label}</span>
+      <span className="text-xs font-medium leading-tight text-gray-600">{label}</span>
     </div>
   );
 }

@@ -1,128 +1,98 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ethers } from "ethers";
-import type { IProvider } from "@web3auth/base";
-import { web3auth, getUserInfo, type UserInfo } from "@/lib/web3auth";
+import {
+  useActiveAccount,
+  useActiveWallet,
+  useActiveWalletConnectionStatus,
+  useConnectModal,
+  useDisconnect,
+  useWalletBalance,
+} from "thirdweb/react";
+import { inAppWallet } from "thirdweb/wallets";
+import { getUserEmail } from "thirdweb/wallets/in-app";
+import { getClient, polygonAmoy } from "@/lib/thirdweb";
 
-interface WalletState {
-  address: string;
-  balance: string;
-  loading: boolean;
-  isConnected: boolean;
-  userInfo: Partial<UserInfo> | null;
-}
-
-const INITIAL_STATE: WalletState = {
-  address: "",
-  balance: "",
-  loading: false,
-  isConnected: false,
-  userInfo: null,
-};
-
-async function loadWalletData(
-  web3authProvider: IProvider
-): Promise<Pick<WalletState, "address" | "balance" | "userInfo">> {
-  const ethersProvider = new ethers.BrowserProvider(
-    web3authProvider as ethers.Eip1193Provider
-  );
-  const signer = await ethersProvider.getSigner();
-  const address = await signer.getAddress();
-  const rawBalance = await ethersProvider.getBalance(address);
-  const balance = parseFloat(ethers.formatEther(rawBalance)).toFixed(4);
-  const userInfo = await getUserInfo();
-
-  return { address, balance, userInfo };
+export interface WalletUserInfo {
+  email?: string;
+  name?: string;
+  profileImage?: string;
 }
 
 export function useWallet() {
-  const [state, setState] = useState<WalletState>(INITIAL_STATE);
+  const account = useActiveAccount();
+  const wallet = useActiveWallet();
+  const { disconnect } = useDisconnect();
+  const connectionStatus = useActiveWalletConnectionStatus();
+  const { connect: openModal, isConnecting } = useConnectModal();
+  const [userInfo, setUserInfo] = useState<WalletUserInfo | null>(null);
 
-  const setLoading = (loading: boolean) =>
-    setState((prev) => ({ ...prev, loading }));
+  const { data: balanceData, isLoading: balanceLoading, refetch } = useWalletBalance({
+    client: getClient(),
+    chain: polygonAmoy,
+    address: account?.address,
+  });
 
-  // Initialisation Web3Auth + reprise de session existante
   useEffect(() => {
-    const init = async () => {
-      try {
-        setLoading(true);
-        await web3auth.initModal();
-
-        if (web3auth.connected && web3auth.provider) {
-          const data = await loadWalletData(web3auth.provider);
-          setState({
-            ...data,
-            loading: false,
-            isConnected: true,
-          });
-        } else {
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error("[useWallet] init error:", err);
-        setLoading(false);
-      }
-    };
-
-    init();
-  }, []);
+    if (!account) {
+      setUserInfo(null);
+      return;
+    }
+    getUserEmail({ client: getClient() })
+      .then((email) => setUserInfo({ email: email ?? undefined }))
+      .catch(() => setUserInfo({}));
+  }, [account]);
 
   const connect = useCallback(async () => {
     try {
-      setLoading(true);
-      const provider = await web3auth.connect();
-      if (!provider) throw new Error("No provider returned by Web3Auth");
-
-      const data = await loadWalletData(provider);
-      setState({
-        ...data,
-        loading: false,
-        isConnected: true,
+      await openModal({
+        client: getClient(),
+        chain: polygonAmoy,
+        wallets: [
+          inAppWallet({
+            auth: { options: ["google", "email"] },
+          }),
+        ],
+        title: "Auto Wallet",
       });
     } catch (err) {
       console.error("[useWallet] connect error:", err);
-      setLoading(false);
     }
-  }, []);
+  }, [openModal]);
 
-  const disconnect = useCallback(async () => {
-    try {
-      setLoading(true);
-      await web3auth.logout();
-      setState(INITIAL_STATE);
-    } catch (err) {
-      console.error("[useWallet] disconnect error:", err);
-      setLoading(false);
-    }
-  }, []);
+  const disconnectWallet = useCallback(() => {
+    if (wallet) disconnect(wallet);
+  }, [wallet, disconnect]);
 
-  const refreshBalance = useCallback(async () => {
-    if (!web3auth.connected || !web3auth.provider) return;
-    try {
-      setLoading(true);
-      const ethersProvider = new ethers.BrowserProvider(
-        web3auth.provider as ethers.Eip1193Provider
-      );
-      const signer = await ethersProvider.getSigner();
-      const address = await signer.getAddress();
-      const rawBalance = await ethersProvider.getBalance(address);
-      const balance = parseFloat(ethers.formatEther(rawBalance)).toFixed(4);
-      setState((prev) => ({ ...prev, balance, loading: false }));
-    } catch (err) {
-      console.error("[useWallet] refreshBalance error:", err);
-      setLoading(false);
-    }
-  }, []);
+  const refreshBalance = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  const address = account?.address ?? "";
+  const balance = balanceData
+    ? parseFloat(balanceData.displayValue).toFixed(4)
+    : "";
+
+  // "unknown" : Thirdweb vérifie s'il y a une session enregistrée.
+  // On l'expose séparément pour ne PAS l'inclure dans le loading du bouton de
+  // connexion — le bouton doit rester cliquable pendant l'initialisation.
+  const isInitializing = connectionStatus === "unknown";
+
+  // loading du bouton : uniquement quand l'utilisateur a activement lancé une connexion
+  // ou quand on recharge le solde après connexion.
+  const loading = isConnecting || (!!account && balanceLoading);
+
+  const isConnected = connectionStatus === "connected";
 
   return {
     connect,
-    disconnect,
+    disconnect: disconnectWallet,
     refreshBalance,
-    address: state.address,
-    balance: state.balance,
-    loading: state.loading,
-    isConnected: state.isConnected,
-    userInfo: state.userInfo,
+    address,
+    balance,
+    loading,
+    isInitializing,
+    isConnected,
+    userInfo,
   };
 }
