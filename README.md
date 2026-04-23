@@ -1,20 +1,20 @@
 # Auto Wallet Demo
 
-Démo technique : création automatique d'un wallet Polygon Amoy lors de l'inscription, sans MetaMask, via Web3Auth.
+Démo technique : création automatique d'un wallet Polygon Amoy lors de l'inscription, sans MetaMask, via Thirdweb.
 
 ## Ce que la démo démontre
 
 - Wallet Polygon Amoy créé automatiquement à l'inscription (sans MetaMask)
 - Connexion Gmail ou email passwordless sans extension browser
 - Adresse wallet réelle, copiable, visible sur PolygonScan
-- Solde POL en temps réel via ethers.js v6
+- Solde POL en temps réel via Thirdweb React hooks
 - Déconnexion propre avec réinitialisation de session
 
 ## Stack
 
 - Next.js 14 (App Router) + TypeScript
 - Tailwind CSS
-- Web3Auth Modal SDK v9 (Sapphire Devnet)
+- Thirdweb v5 SDK (in-app wallet)
 - Polygon Amoy Testnet (chainId: 0x13882)
 - ethers.js v6
 
@@ -25,17 +25,16 @@ Démo technique : création automatique d'un wallet Polygon Amoy lors de l'inscr
 ### 1. Cloner et installer
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/771salameche/wallet-service
 cd wallet-demo
 npm install
 ```
 
-### 2. Obtenir un Client ID Web3Auth
+### 2. Obtenir un Client ID Thirdweb
 
-1. Aller sur [https://dashboard.web3auth.io](https://dashboard.web3auth.io)
-2. Créer un projet (ex : "Auto Wallet Demo")
-3. Sélectionner **Sapphire Devnet**
-4. Copier le **Client ID**
+1. Aller sur [https://thirdweb.com/dashboard](https://thirdweb.com/dashboard)
+2. Créer un projet
+3. Copier le **Client ID**
 
 ### 3. Configurer les variables d'environnement
 
@@ -46,8 +45,7 @@ cp .env.example .env.local
 Éditer `.env.local` :
 
 ```env
-NEXT_PUBLIC_WEB3AUTH_CLIENT_ID=<votre-client-id>
-NEXT_PUBLIC_POLYGON_AMOY_RPC=https://rpc-amoy.polygon.technology
+NEXT_PUBLIC_THIRDWEB_CLIENT_ID=<votre-client-id>
 ```
 
 ### 4. Lancer le serveur de développement
@@ -78,26 +76,25 @@ Pour obtenir des POL de test :
 ```
 wallet-demo/
 ├── app/
-│   ├── page.tsx              # Page Login
-│   ├── dashboard/page.tsx    # Dashboard wallet
-│   ├── not-found.tsx         # Page 404
-│   ├── layout.tsx            # Layout global
-│   └── globals.css           # Tailwind + animations
+│   ├── page.tsx                  # Page Login
+│   ├── dashboard/page.tsx        # Dashboard wallet
+│   ├── api/balance/route.ts      # API route — solde wallet (server-side)
+│   ├── not-found.tsx             # Page 404 personnalisée
+│   ├── layout.tsx                # Layout global
+│   └── globals.css               # Tailwind + animations
 ├── components/
-│   ├── LoginButton.tsx       # Bouton connexion Web3Auth
-│   ├── WalletCard.tsx        # Carte adresse + solde
-│   └── TransactionHistory.tsx
+│   ├── Providers.tsx             # ThirdwebProvider wrapper
+│   ├── WalletCard.tsx            # Carte adresse + solde
+│   └── TransactionHistory.tsx    # Historique (placeholder)
 ├── hooks/
-│   └── useWallet.ts          # Logique wallet centralisée
+│   └── useWallet.ts              # Logique wallet centralisée
 └── lib/
-    ├── web3auth.ts           # Instance Web3Auth singleton
-    └── polygon.ts            # Config Polygon Amoy + helpers
+    └── thirdweb.ts               # Client Thirdweb singleton + config Polygon Amoy
 ```
 
 ---
 
 ## Notes
 
-- Web3Auth Sapphire Devnet est gratuit jusqu'à 1 000 utilisateurs actifs/mois
 - Ne jamais committer `.env.local`
-- Les clés privées sont gérées entièrement par Web3Auth — elles ne transitent jamais par l'application
+- Les clés privées sont gérées entièrement par Thirdweb — elles ne transitent jamais par l'application
